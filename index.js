@@ -37,33 +37,32 @@ function appendJokeToFile(joke) {
 
 
 function scheduleReminder(date, numberOfReminders, timeGap, timeUnit) {
-    const eventDate = new Date(date).getTime();
-    let frequencyInSeconds;
+    const eventDate = new Date(date);
+    let frequency;
 
     switch (timeUnit) {
         case 'seconds':
-            frequencyInSeconds = timeGap;
+            frequency = `*/${timeGap} * * * * *`; // Every 'timeGap' seconds
             break;
         case 'minutes':
-            frequencyInSeconds = timeGap * 60;
+            frequency = `0 */${timeGap} * * * *`; // Every 'timeGap' minutes
             break;
         case 'hours':
-            frequencyInSeconds = timeGap * 3600;
+            frequency = `0 0 */${timeGap} * * *`; // Every 'timeGap' hours
             break;
         default:
-            frequencyInSeconds = 60; // Default to 1 minute
+            frequency = '0 */1 * * * *'; // Default: Every minute
     }
 
-    for (let i = 0; i < numberOfReminders; i++) {
-        const reminderTime = eventDate + (frequencyInSeconds * 1000 * (i + 1));
-        const reminderDate = new Date(reminderTime);
-        cron.schedule(`${reminderDate.getSeconds()} ${reminderDate.getMinutes()} ${reminderDate.getHours()} ${reminderDate.getDate()} * *`, async () => {
+    cron.schedule(frequency, async () => {
+        for (let i = 0; i < numberOfReminders; i++) {
             const joke = await getRandomJoke();
-            console.log(`Reminder: Event at ${new Date(eventDate)}. Joke: ${joke}`);
+            console.log(`Reminder: Event at ${eventDate}. Joke: ${joke}`);
             appendJokeToFile(joke);
-        });
-    }
+        }
+    });
 }
+
 
 
 
