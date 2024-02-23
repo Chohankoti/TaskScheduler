@@ -1,6 +1,13 @@
+const express = require('express');
+const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+
+const app = express();
+const port = 3000;
+
+app.use(express.json());
 
 
 async function getRandomJoke() {
@@ -29,12 +36,45 @@ function appendJokeToFile(joke) {
 }
 
 
-function scheduleReminder(date, frequencyInSeconds) {
-    const cronExpression = `*/${frequencyInSeconds} * * * * *`;
+function scheduleReminder(date, numberOfReminders, timeGap, timeUnit) {
+    const eventDate = new Date(date).getTime();
+    let frequencyInSeconds;
 
-    cron.schedule(cronExpression, async () => {
-        const joke = await getRandomJoke();
-        console.log(`Reminder: Event at ${date}. Joke: ${joke}`);
-        appendJokeToFile(joke);
-    });
+    switch (timeUnit) {
+        case 'seconds':
+            frequencyInSeconds = timeGap;
+            break;
+        case 'minutes':
+            frequencyInSeconds = timeGap * 60;
+            break;
+        case 'hours':
+            frequencyInSeconds = timeGap * 3600;
+            break;
+        default:
+            frequencyInSeconds = 60; // Default to 1 minute
+    }
+
+    for (let i = 0; i < numberOfReminders; i++) {
+        const reminderTime = eventDate + (frequencyInSeconds * 1000 * (i + 1));
+        const reminderDate = new Date(reminderTime);
+        cron.schedule(`${reminderDate.getSeconds()} ${reminderDate.getMinutes()} ${reminderDate.getHours()} ${reminderDate.getDate()} * *`, async () => {
+            const joke = await getRandomJoke();
+            console.log(`Reminder: Event at ${new Date(eventDate)}. Joke: ${joke}`);
+            appendJokeToFile(joke);
+        });
+    }
 }
+
+
+
+
+
+app.post('/schedule', (req, res) => {
+    const { date, numberOfReminders, timeGap, timeUnit } = req.body;
+    scheduleReminder(date, numberOfReminders, timeGap, timeUnit);
+    res.send('Reminders scheduled successfully');
+});
+
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+});
