@@ -10,6 +10,16 @@ const port = 3000;
 app.use(express.json());
 
 
+/*
+{
+    "date": "2024-02-23",
+    "numberOfReminders": 5,
+    "timeGap": 5,
+    "timeUnit": "seconds"
+}
+*/
+
+
 async function getRandomJoke() {
     try {
         const response = await axios.get('https://api.chucknorris.io/jokes/random');
@@ -54,19 +64,20 @@ function scheduleReminder(date, numberOfReminders, timeGap, timeUnit) {
             frequency = '0 */1 * * * *'; // Default: Every minute
     }
 
-    cron.schedule(frequency, async () => {
-        for (let i = 0; i < numberOfReminders; i++) {
+    let remindersTriggered = 0;
+    const job = cron.schedule(frequency, async () => {
+        if (remindersTriggered < numberOfReminders) {
             const joke = await getRandomJoke();
             console.log(`Reminder: Event at ${eventDate}. Joke: ${joke}`);
             appendJokeToFile(joke);
+            remindersTriggered++;
+
+            if (remindersTriggered === numberOfReminders) {
+                job.stop(); 
+            }
         }
     });
 }
-
-
-
-
-
 
 app.post('/schedule', (req, res) => {
     const { date, numberOfReminders, timeGap, timeUnit } = req.body;
